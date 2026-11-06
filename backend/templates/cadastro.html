@@ -1,0 +1,84 @@
+﻿{% extends "auth_base.html" %}
+
+{% block title %}Cadastro - Fluir{% endblock %}
+
+{% block auth_content %}
+<h1>Cadastro</h1>
+
+<div class="segmented">
+    <a class="{% if tipo == 'Funcionario' %}active{% endif %}" href="{{ url_for('cadastro', tipo='Funcionario') }}">Funcion&aacute;rio</a>
+    <a class="{% if tipo == 'Porto' %}active{% endif %}" href="{{ url_for('cadastro', tipo='Porto') }}">Porto</a>
+</div>
+
+{% if senha_avisos %}
+    <div class="app-toast app-toast-warning" role="status">{% for aviso in senha_avisos %}<span>{{ aviso }}</span>{% if not loop.last %} · {% endif %}{% endfor %}</div>
+{% endif %}
+
+{% if tipo == "Funcionario" %}
+<form class="form-stack" action="{{ url_for('signup_funcionario') }}" method="post">
+    <h2>Cadastro de Funcion&aacute;rio</h2>
+    <label>Nome Completo <input name="nome_completo" data-email-name value="{{ form.nome_completo if form else '' }}" required></label>
+    <label>Data de Nascimento <input name="data_nascimento" type="date" value="{{ form.data_nascimento if form else '' }}" required></label>
+    <label>E-mail de acesso <input type="email" value="{{ form.email if form else '' }}" data-email-preview placeholder="Será gerado pelas iniciais do nome e sobrenome" readonly></label>
+    <label>Cargo
+        <select name="cargo" required>
+            <option value="">Selecione seu setor</option>
+            {% for cargo in cargos %}
+                <option value="{{ cargo }}" {% if form and form.cargo == cargo %}selected{% endif %}>{{ cargo_exibicao(cargo) }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Senha <input name="password" type="password" required></label>
+    <div class="password-rules">
+        <strong>REGRAS OBRIGAT&Oacute;RIAS PARA A SENHA</strong>
+        <span>Pelo menos 8 caracteres</span>
+        <span>Pelo menos 1 letra mai&uacute;scula e 1 min&uacute;scula</span>
+        <span>Pelo menos 1 n&uacute;mero</span>
+        <span>Pelo menos 1 caractere especial (@, #, $, %, !)</span>
+    </div>
+    <label>C&oacute;digo do Porto <input name="codigo_porto" value="{{ form.codigo_porto if form else '' }}" maxlength="5" data-port-code required></label>
+    <small class="field-help">Obrigat&oacute;rio para vincular o funcion&aacute;rio ao porto onde ele trabalha.</small>
+    <label>C&oacute;digo de Gest&atilde;o <input name="codigo_gestao" value="{{ form.codigo_gestao if form else '' }}" maxlength="5" data-port-code></label>
+    <small class="field-help">Opcional. Quem possuir esse c&oacute;digo ser&aacute; cadastrado como representante do setor.</small>
+    <button class="primary-button" type="submit">Cadastrar Funcion&aacute;rio</button>
+</form>
+{% else %}
+<form class="form-stack" action="{{ url_for('signup_porto') }}" method="post">
+    <h2>Dados de Identifica&ccedil;&atilde;o</h2>
+    <label>Nome comercial ou oficial do porto <input name="nome_porto" value="{{ form.nome_porto if form else '' }}" required></label>
+    <label>Nome do rio <input name="nome_rio" value="{{ form.nome_rio if form else '' }}" required></label>
+    <label>C&oacute;digo Portu&aacute;rio (UN/LOCODE) <input name="codigo_portuario" value="{{ form.codigo_portuario if form else '' }}" maxlength="5" data-port-code required></label>
+    <label>C&oacute;digo de Gest&atilde;o <input name="codigo_poder_maior" value="{{ form.codigo_poder_maior if form else '' }}" maxlength="5" data-port-code required></label>
+    <small class="field-help">Esse c&oacute;digo identifica representantes de setor com permiss&atilde;o para alterar o calend&aacute;rio e usar o chat setorial.</small>
+
+    <h2>Localiza&ccedil;&atilde;o</h2>
+    <label>Cidade <input name="cidade" value="{{ form.cidade if form else '' }}" required></label>
+    <label>Estado <input name="estado" value="{{ form.estado if form else '' }}" required></label>
+    <div class="form-grid">
+        <label>Latitude <input name="latitude" value="{{ form.latitude if form else '' }}" required></label>
+        <label>Longitude <input name="longitude" value="{{ form.longitude if form else '' }}" required></label>
+    </div>
+
+    <h2>Dados T&eacute;cnicos</h2>
+    <label>Ponto Quilom&eacute;trico (PK) <input name="ponto_quilometrico" value="{{ form.ponto_quilometrico if form else '' }}" required></label>
+    <label>Margem
+        <select name="margem" required>
+            {% for margem in ["Margem Direita", "Margem Esquerda"] %}
+                <option value="{{ margem }}" {% if form and form.margem == margem %}selected{% endif %}>{{ margem }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Tipo de Porto
+        <select name="tipo_porto" required>
+            {% for item in ["Publico", "Terminal de Uso Privado (TUP)"] %}
+                <option value="{{ item }}" {% if form and form.tipo_porto == item %}selected{% endif %}>{{ "Público" if item == "Publico" else item }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <button class="primary-button" type="submit">Cadastrar Porto</button>
+</form>
+{% endif %}
+
+<a class="back-link" href="{{ url_for('login') }}">Voltar para login</a>
+{% endblock %}

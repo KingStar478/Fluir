@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chat - Fluir</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20261106-1">
+    <script>const t=document.cookie.split("; ").find((item)=>item.startsWith("fluir-theme="));document.documentElement.dataset.theme=t?t.split("=")[1]:(localStorage.getItem("fluir-theme")||"dark");document.cookie=`fluir-theme=${document.documentElement.dataset.theme}; Path=/; Max-Age=31536000; SameSite=Lax`;</script>
+    <script src="/static/js/app.js?v=20261106-1" defer></script>
+</head>
+<body>
+    <div class="offline-status" data-offline-status role="status" aria-live="polite" hidden></div>
+    <main
+        class="chat-page"
+        data-chat-page
+        data-user="{{ user }}"
+        data-full-name="{{ nome_completo }}"
+        data-porto="{{ porto }}"
+        data-setor="{{ setor }}"
+        data-room="{{ room }}"
+        data-token="{{ token }}"
+        data-is-representative="{{ is_representative }}"
+        data-representatives-room="{{ representatives_room }}"
+        data-all-representatives-room="{{ all_representatives_room }}"
+        data-avatar-url="{{ avatar_url }}"
+    >
+        <button class="chat-mobile-menu-toggle" type="button" data-chat-mobile-menu-toggle aria-controls="chat-mobile-drawer" aria-expanded="false" aria-label="Abrir navegação principal">☰</button>
+        <button class="chat-mobile-backdrop" type="button" data-chat-mobile-backdrop aria-label="Fechar navegação principal" hidden></button>
+        <div class="chat-mobile-drawer" id="chat-mobile-drawer" data-chat-mobile-drawer aria-hidden="true">
+            <aside class="chat-app-nav">
+                <div class="chat-app-brand-row">
+                    <a class="chat-app-brand" href="http://127.0.0.1:5000/home">Fluir</a>
+                    <button class="chat-mobile-menu-close" type="button" data-chat-mobile-menu-close aria-label="Fechar menu">×</button>
+                </div>
+                <nav class="chat-app-links" aria-label="Navegação principal">
+                    <a href="http://127.0.0.1:5000/home">Painel</a>
+                    <a href="http://127.0.0.1:5000/calendario">Calendário</a>
+                    <a class="active chat-nav-link" href="http://127.0.0.1:5000/chat" data-chat-total-unread aria-label="Chat">
+                        Chat <span class="chat-unread-badge chat-nav-unread-badge" data-chat-nav-unread hidden></span>
+                    </a>
+                    {{ link_funcionarios }}
+                    <a href="http://127.0.0.1:5000/perfil">Perfil</a>
+                </nav>
+            </aside>
+        </div>
+        <aside class="chat-sidebar">
+            <header class="chat-sidebar-header">
+                <div class="chat-user-self">
+                    <span class="chat-avatar" data-self-avatar></span>
+                    <div>
+                        <strong data-self-name>{{ nome_completo }}</strong>
+                        <small>{{ setor_exibicao }} - Porto {{ porto }}</small>
+                    </div>
+                </div>
+            </header>
+
+            <div class="chat-search">
+                <input data-contact-search type="search" placeholder="Pesquisar" aria-label="Pesquisar funcionários">
+            </div>
+
+            <nav class="chat-contact-list" data-users-list aria-label="Conversas">
+                <button class="chat-contact" type="button" data-general-contact>
+                    <span class="chat-avatar chat-avatar-room">G</span>
+                    <span class="chat-contact-main">
+                        <strong>Chat do setor</strong>
+                        <small data-sector-caption>Todos os funcionários de {{ setor }}</small>
+                    </span>
+                    <span class="chat-contact-meta">agora<span class="chat-unread-badge" data-unread-badge hidden></span></span>
+                </button>
+                <div data-recent-list></div>
+                <p class="chat-contact-group-title" data-search-title hidden>Funcionários</p>
+                <div data-search-list hidden></div>
+                <p class="chat-contact-empty" data-contacts-loading>Carregando conversas...</p>
+            </nav>
+        </aside>
+
+        <section class="chat-shell">
+            <section class="chat-conversation">
+                <header class="chat-header">
+                    <button class="chat-back-button" type="button" data-exit-conversation aria-label="Sair da conversa e voltar à lista">Sair</button>
+                    <div class="chat-active-avatar-wrap">
+                        <span class="chat-avatar chat-avatar-active" data-active-avatar>G</span>
+                        <label class="chat-group-avatar-picker" data-group-avatar-picker hidden title="Representantes podem alterar a foto do grupo" aria-label="Alterar foto do grupo">
+                            <input type="file" accept="image/jpeg,image/png,image/webp" data-group-avatar-file aria-label="Escolher foto do grupo">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                        </label>
+                    </div>
+                    <div class="chat-header-title">
+                        <div class="chat-title-row">
+                            <h1 data-active-name>Chat do setor</h1>
+                            <button class="chat-room-name-edit" type="button" data-edit-group-name hidden>Editar nome</button>
+                        </div>
+                        <p data-chat-title>Todos os funcionários de {{ setor }} - Porto {{ porto }}</p>
+                        <p class="chat-network-note" data-chat-network-note role="status" hidden></p>
+                    </div>
+                    <div class="chat-header-actions">
+                        <span class="chat-status" data-chat-status>Conectando...</span>
+                        <div class="chat-menu-wrap">
+                            <button class="chat-menu-button" type="button" data-chat-menu-button aria-label="Abrir opções da conversa">...</button>
+                            <div class="chat-menu" data-chat-menu hidden>
+                                <button type="button" data-close-chat hidden>Fechar conversa</button>
+                                <button type="button" data-delete-chat>Apagar histórico da conversa</button>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <section class="chat-messages" data-chat-messages aria-live="polite"></section>
+                <div class="chat-exit-state" data-chat-exit-state hidden>
+                    <strong>Nenhuma conversa aberta</strong>
+                    <p>Escolha uma conversa na lista para entrar.</p>
+                </div>
+
+                <form class="chat-form" data-chat-form>
+                    <input
+                        data-chat-input
+                        name="message"
+                        autocomplete="off"
+                        maxlength="700"
+                        placeholder="Digite uma mensagem"
+                        required
+                    >
+                    <button class="primary-button" type="submit">Enviar</button>
+                </form>
+            </section>
+        </section>
+        <dialog class="chat-confirm-dialog" data-chat-confirm-dialog><form method="dialog" class="chat-confirm-card"><h2 data-confirm-title>Confirmar ação</h2><p data-confirm-message></p><div><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" value="confirm" data-confirm-action>Confirmar</button></div></form></dialog>
+        <dialog class="chat-confirm-dialog chat-room-name-dialog" data-chat-room-name-dialog>
+            <form method="dialog" class="chat-confirm-card chat-room-name-card">
+                <h2>Alterar nome do grupo</h2>
+                <p>O novo nome aparecerá para as pessoas deste grupo.</p>
+                <label for="chat-room-name-input">Nome do grupo</label>
+                <input id="chat-room-name-input" data-chat-room-name-input type="text" maxlength="50" required autocomplete="off">
+                <div>
+                    <button class="secondary-button" type="button" data-cancel-room-name>Cancelar</button>
+                    <button class="primary-button" type="button" data-save-room-name>Salvar nome</button>
+                </div>
+            </form>
+        </dialog>
+    </main>
+
+    <script>
+        const page = document.querySelector("[data-chat-page]");
+        const shell = document.querySelector(".chat-shell");
+        const messages = document.querySelector("[data-chat-messages]");
+        const form = document.querySelector("[data-chat-form]");
+        const input = document.querySelector("[data-chat-input]");
+        const submitButton = form.querySelector("[type='submit']");
+        const statusLabel = document.querySelector("[data-chat-status]");
+        const networkNote = document.querySelector("[data-chat-network-note]");
+        const chatTitle = document.querySelector("[data-chat-title]");
+        const usersList = document.querySelector("[data-users-list]");
+        const generalContact = document.querySelector("[data-general-contact]");
+        const searchInput = document.querySelector("[data-contact-search]");
+        const recentList = document.querySelector("[data-recent-list]");
+        const searchList = document.querySelector("[data-search-list]");
+        const searchTitle = document.querySelector("[data-search-title]");
+        const activeName = document.querySelector("[data-active-name]");
+        const activeAvatar = document.querySelector("[data-active-avatar]");
+        const selfAvatar = document.querySelector("[data-self-avatar]");
+        const groupAvatarPicker = document.querySelector("[data-group-avatar-picker]");
+        const groupAvatarFile = document.querySelector("[data-group-avatar-file]");
+        const editGroupNameButton = document.querySelector("[data-edit-group-name]");
+        const roomNameDialog = document.querySelector("[data-chat-room-name-dialog]");
+        const roomNameInput = document.querySelector("[data-chat-room-name-input]");
+        const saveRoomNameButton = document.querySelector("[data-save-room-name]");
+        const cancelRoomNameButton = document.querySelector("[data-cancel-room-name]");
+        const exitConversationButton = document.querySelector("[data-exit-conversation]");
+        const chatMenuButton = document.querySelector("[data-chat-menu-button]");
+        const chatMenu = document.querySelector("[data-chat-menu]");
+        const deleteChatButton = document.querySelector("[data-delete-chat]");
+        const closeChatButton = document.querySelector("[data-close-chat]");
+        const exitChatState = document.querySelector("[data-chat-exit-state]");
+        const confirmDialog = document.querySelector("[data-chat-confirm-dialog]");
+        const mobileMenuToggle = document.querySelector("[data-chat-mobile-menu-toggle]");
+        const mobileMenuDrawer = document.querySelector("[data-chat-mobile-drawer]");
+        const mobileMenuBackdrop = document.querySelector("[data-chat-mobile-backdrop]");
+        const mobileMenuClose = document.querySelector("[data-chat-mobile-menu-close]");
+        const compactChatMenu = window.matchMedia("(max-width: 800px)");
+        const setMobileMenuOpen = (open, returnFocus = false) => {
+            const isOpen = open && compactChatMenu.matches;
+            page.classList.toggle("chat-nav-open", isOpen);
+            mobileMenuToggle.setAttribute("aria-expanded", String(isOpen));
+            mobileMenuToggle.setAttribute("aria-label", isOpen ? "Fechar navegação principal" : "Abrir navegação principal");
+            mobileMenuDrawer.setAttribute("aria-hidden", String(compactChatMenu.matches && !isOpen));
+            mobileMenuBackdrop.hidden = !isOpen;
+            if (returnFocus && compactChatMenu.matches) mobileMenuToggle.focus();
+        };
+        const exitConversation = () => {
+            roomSelection += 1;
+            room = "";
+            activeContactUsername = "";
+            activeChatName = "Nenhuma conversa aberta";
+            activeSubtitle = "";
+            page.classList.add("chat-conversation-exited");
+            shell.classList.remove("chat-mobile-open");
+            document.querySelectorAll(".chat-contact").forEach((item) => item.classList.remove("active"));
+            chatMenu.hidden = true;
+            closeChatButton.hidden = true;
+            groupAvatarPicker.hidden = true;
+            editGroupNameButton.hidden = true;
+            statusLabel.textContent = "Desconectado";
+            statusLabel.classList.remove("online");
+            input.disabled = true;
+            submitButton.disabled = true;
+            setNetworkNote("");
+            exitChatState.hidden = false;
+            if (socket) {
+                const currentSocket = socket;
+                socket = null;
+                currentSocket.close();
+            }
+        };
+        mobileMenuToggle.addEventListener("click", () => setMobileMenuOpen(!page.classList.contains("chat-nav-open")));
+        mobileMenuClose.addEventListener("click", () => setMobileMenuOpen(false, true));
+        mobileMenuBackdrop.addEventListener("click", () => setMobileMenuOpen(false, true));
+        document.querySelectorAll(".chat-app-links a").forEach((link) => link.addEventListener("click", () => setMobileMenuOpen(false)));
+        document.addEventListener("keydown", (event) => {
+            if (event.key !== "Escape") return;
+            if (page.classList.contains("chat-nav-open")) setMobileMenuOpen(false, true);
+        });
+        compactChatMenu.addEventListener("change", () => setMobileMenuOpen(false));
+        setMobileMenuOpen(false);
+
+        const user = page.dataset.user;
+        const fullName = page.dataset.fullName;
+        const porto = page.dataset.porto;
+        const setor = page.dataset.setor;
+        const setorLabels = {
+            "Operacoes Portuarias": "Operações Portuárias",
+            "Navegacao e Trafego Fluvial": "Navegação e Tráfego Fluvial",
+            "Seguranca do Trabalho": "Segurança do Trabalho",
+            Logistica: "Logística",
+            "Fiscalizacao e Controle": "Fiscalização e Controle",
+            Administracao: "Administração",
+        };
+        const setorVisual = setorLabels[setor] || setor;
+        document.querySelector("[data-sector-caption]").textContent = `Todos os funcionários de ${setorVisual}`;
+        const token = page.dataset.token;
+        const isRepresentative = page.dataset.isRepresentative === "true";
+        const representativesRoom = page.dataset.representativesRoom;
+        const allRepresentativesRoom = page.dataset.allRepresentativesRoom && page.dataset.allRepresentativesRoom.indexOf("{") === -1
+            ? page.dataset.allRepresentativesRoom
+            : "todos-representantes-fluir";
+        const generalRoom = page.dataset.room;
+        const directory = [];
+        const recentContacts = new Map();
+        let room = "";
+        let activeChatName = "Chat do setor";
+        let activeSubtitle = `Todos os funcionários de ${setorVisual} - Porto ${porto}`;
+        let activeContactUsername = "";
+        let socket;
+        let roomSelection = 0;
+        let pendingMessage = "";
+        let pendingMessageTimer = null;
+        let reconnectNoticeShown = false;
+
+        const initialsFor = (name) => {
+            const parts = (name || "U").trim().split(/\s+/).slice(0, 2);
+            return parts.map((part) => part.charAt(0).toUpperCase()).join("") || "U";
+        };
+
+        const escapeHTML = (value) => {
+            const holder = document.createElement("span");
+            holder.textContent = value;
+            return holder.innerHTML;
+        };
+
+        const normalizeSearch = (value) => value
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLocaleLowerCase("pt-BR");
+
+        const setActiveContact = (button) => {
+            document.querySelectorAll(".chat-contact").forEach((item) => {
+                item.classList.toggle("active", item === button);
+            });
+        };
+
+        const formatTime = (isoDate) => {
+            const date = new Date(isoDate);
+            return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        };
+
+        const setAvatar = (element, name, avatarURL) => {
+            element.replaceChildren();
+            if (avatarURL && (
+                avatarURL.startsWith("/static/uploads/avatars/")
+                || avatarURL.startsWith("/static/uploads/chat-room-avatars/")
+            )) {
+                const image = document.createElement("img");
+                image.src = avatarURL;
+                image.alt = "";
+                image.addEventListener("error", () => {
+                    element.textContent = initialsFor(name);
+                }, { once: true });
+                element.appendChild(image);
+            } else {
+                element.textContent = initialsFor(name);
+            }
+        };
+
+        const addMessage = (item) => {
+            if (item.id && [...messages.querySelectorAll("[data-message-id]")].some((row) => row.dataset.messageId === String(item.id))) {
+                return;
+            }
+            const row = document.createElement("div");
+            messages.querySelector("[data-chat-empty]")?.remove();
+            if (item.id) row.dataset.messageId = String(item.id);
+            const isOwnMessage = item.username === user;
+            const isPrivateRoom = room.startsWith("privado-");
+            row.className = `chat-message-row ${isOwnMessage ? "chat-message-row-own" : ""}`;
+            const message = document.createElement("article");
+            message.className = `chat-message ${isOwnMessage ? "chat-message-own" : ""}`;
+            {
+                const palette = ["#c084fc", "#f472b6", "#fb923c", "#34d399", "#38bdf8", "#facc15", "#a3e635", "#f87171"];
+                const key = item.username || item.display_name || "user";
+                const colorIndex = [...key].reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length;
+                const avatar = document.createElement("span");
+                avatar.className = "chat-message-corner-avatar";
+                setAvatar(avatar, item.display_name || "Usuário", item.avatar_url || "");
+                row.style.setProperty("--sender-color", palette[colorIndex]);
+                if (!isPrivateRoom) {
+                    const author = document.createElement("strong");
+                    author.className = "chat-message-author";
+                    author.textContent = item.display_name || "Funcionário";
+                    message.appendChild(author);
+                }
+                row.appendChild(avatar);
+            }
+            const body = document.createElement("p");
+            body.textContent = item.message;
+            const meta = document.createElement("span");
+            meta.className = "chat-message-meta";
+            meta.textContent = formatTime(item.created_at);
+            message.append(body, meta);
+            row.appendChild(message);
+            messages.appendChild(row);
+            messages.scrollTop = messages.scrollHeight;
+        };
+
+        const setNetworkNote = (text = "") => {
+            networkNote.textContent = text;
+            networkNote.hidden = !text;
+        };
+
+        const updateUnreadBadges = async () => {
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/unread?${params}`, { cache: "no-store" });
+                if (!response.ok) return;
+                const payload = await response.json();
+                const totalUnread = Object.values(payload.unread || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+                const navBadge = document.querySelector("[data-chat-nav-unread]");
+                if (navBadge) {
+                    navBadge.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
+                    navBadge.hidden = totalUnread === 0;
+                    navBadge.setAttribute("aria-label", `${totalUnread} mensagens novas`);
+                    document.querySelector("[data-chat-total-unread]")?.setAttribute(
+                        "aria-label",
+                        totalUnread ? `Chat, ${totalUnread} mensagens novas` : "Chat",
+                    );
+                }
+                usersList.querySelectorAll("[data-unread-badge]").forEach((badge) => {
+                    const count = Number(payload.unread?.[badge.dataset.unreadRoom] || 0);
+                    badge.textContent = count > 99 ? "99+" : String(count);
+                    badge.hidden = count === 0;
+                    badge.setAttribute("aria-label", `${count} mensagens não lidas`);
+                });
+            } catch (error) {
+                // Mantém os últimos indicadores quando a conexão está indisponível.
+            }
+        };
+
+        const markCurrentRoomRead = async () => {
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/read/${encodeURIComponent(room)}?${params}`, { method: "POST" });
+                if (response.ok) await updateUnreadBadges();
+            } catch (error) {
+                setNetworkNote("Não foi possível atualizar as mensagens lidas. Verifique a conexão.");
+            }
+        };
+
+        const clearMessages = () => {
+            messages.replaceChildren();
+        };
+
+        const updateTitle = () => {
+            activeName.textContent = activeChatName;
+            setAvatar(activeAvatar, activeChatName, activeAvatar.dataset.avatarUrl || "");
+            chatTitle.textContent = activeSubtitle;
+            chatTitle.hidden = !activeSubtitle;
+        };
+
+        const setGroupDisplayName = (contactButton, displayName) => {
+            if (!contactButton) return;
+            const visibleName = (displayName || "").trim() || contactButton.dataset.defaultName || "Grupo";
+            contactButton.dataset.displayName = (displayName || "").trim();
+            const title = contactButton.querySelector(".chat-contact-main strong");
+            const role = contactButton.querySelector(".chat-contact-main small");
+            if (title) title.textContent = visibleName;
+            contactButton.dataset.contactName = `${visibleName} ${role?.textContent || ""}`.trim();
+            if (contactButton.dataset.room && contactButton.dataset.room === room) {
+                activeChatName = visibleName;
+                activeName.textContent = visibleName;
+            }
+        };
+
+        const refreshGroupAvatar = async (contactButton) => {
+            const contactRoom = contactButton?.dataset.room;
+            if (!contactRoom) return;
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/room-avatar/${encodeURIComponent(contactRoom)}?${params}`, { cache: "no-store" });
+                if (!response.ok) return;
+                const payload = await response.json();
+                const avatarURL = payload.avatar_url || "";
+                setGroupDisplayName(contactButton, payload.display_name || "");
+                contactButton.dataset.avatarUrl = avatarURL;
+                const avatar = contactButton.querySelector(".chat-avatar");
+                if (avatar) setAvatar(avatar, contactButton.dataset.contactName || "Grupo", avatarURL);
+                if (room === contactRoom) {
+                    activeAvatar.dataset.avatarUrl = avatarURL;
+                    setAvatar(activeAvatar, activeChatName, avatarURL);
+                }
+            } catch (error) {
+                // Mantém o avatar azul padrão se a conexão estiver indisponível.
+            }
+        };
+
+        const refreshGroupProfiles = async () => {
+            const groupButtons = new Map();
+            [generalContact, ...recentList.querySelectorAll(".chat-contact[data-room]")].forEach((button) => {
+                if (button.dataset.contactKind !== "private" && button.dataset.room) {
+                    groupButtons.set(button.dataset.room, button);
+                }
+            });
+            await Promise.all([...groupButtons.values()].map(refreshGroupAvatar));
+        };
+
+        const loadHistory = async () => {
+            const requestedRoom = room;
+            if (!requestedRoom) return false;
+            clearMessages();
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/history/${encodeURIComponent(requestedRoom)}?${params}`, { cache: "no-store" });
+                if (!response.ok) throw new Error("Falha ao carregar o histórico");
+                const payload = await response.json();
+                if (room !== requestedRoom || page.classList.contains("chat-conversation-exited")) return false;
+                payload.messages.forEach(addMessage);
+                setNetworkNote("");
+                await updateUnreadBadges();
+                return true;
+            } catch (error) {
+                messages.querySelector("[data-chat-empty]")?.remove();
+                setNetworkNote("Não foi possível carregar o histórico desta conversa. Confira a conexão e tente novamente.");
+                return false;
+            }
+        };
+
+        const connect = () => {
+            if (!room || page.classList.contains("chat-conversation-exited")) return;
+            if (socket) {
+                socket.onclose = null;
+                socket.close();
+            }
+            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+            const params = new URLSearchParams({ user, porto, setor, token });
+            socket = new WebSocket(`${protocol}://${window.location.host}/ws/${encodeURIComponent(room)}?${params}`);
+            const activeSocket = socket;
+
+            socket.addEventListener("open", async () => {
+                statusLabel.textContent = "Online";
+                statusLabel.classList.add("online");
+                input.disabled = Boolean(pendingMessage);
+                submitButton.disabled = Boolean(pendingMessage);
+                if (reconnectNoticeShown) await loadHistory();
+                reconnectNoticeShown = false;
+                if (!pendingMessage) setNetworkNote("");
+            });
+
+            socket.addEventListener("message", (event) => {
+                if (socket !== activeSocket) return;
+                const item = JSON.parse(event.data);
+                addMessage(item);
+                if (item.username === user && pendingMessage && item.message === pendingMessage) {
+                    if (pendingMessageTimer) window.clearTimeout(pendingMessageTimer);
+                    if (input.value.trim() === pendingMessage) input.value = "";
+                    pendingMessage = "";
+                    pendingMessageTimer = null;
+                    input.disabled = false;
+                    submitButton.disabled = false;
+                    setNetworkNote("");
+                }
+                markCurrentRoomRead();
+            });
+
+            socket.addEventListener("close", () => {
+                if (socket !== activeSocket) {
+                    return;
+                }
+                statusLabel.textContent = "Reconectando...";
+                statusLabel.classList.remove("online");
+                input.disabled = false;
+                submitButton.disabled = false;
+                if (pendingMessageTimer) window.clearTimeout(pendingMessageTimer);
+                pendingMessageTimer = null;
+                if (pendingMessage) {
+                    pendingMessage = "";
+                    setNetworkNote("A mensagem não foi confirmada. O texto continua no campo; tente enviar novamente quando a conexão voltar.");
+                } else if (!reconnectNoticeShown) {
+                    setNetworkNote("Conexão interrompida. Tentando reconectar automaticamente...");
+                }
+                reconnectNoticeShown = true;
+                window.setTimeout(connect, 1800);
+            });
+
+            socket.addEventListener("error", () => {
+                if (socket !== activeSocket) return;
+                statusLabel.textContent = "Sem conexão";
+                statusLabel.classList.remove("online");
+                input.disabled = false;
+                submitButton.disabled = false;
+                setNetworkNote("Não foi possível conectar ao chat. O Fluir tentará novamente em instantes.");
+            });
+        };
+
+        const openRoom = async (nextRoom, nextName, nextSubtitle, activeButton, avatarURL = "") => {
+            const selection = ++roomSelection;
+            setMobileMenuOpen(false);
+            page.classList.remove("chat-conversation-exited");
+            exitChatState.hidden = true;
+            room = nextRoom;
+            activeContactUsername = activeButton?.dataset.username || "";
+            closeChatButton.hidden = !activeContactUsername;
+            const contactKind = activeButton?.dataset.contactKind;
+            const isGroupRoom = contactKind === "general" || contactKind === "representatives"
+                || [generalRoom, representativesRoom, allRepresentativesRoom].includes(nextRoom);
+            groupAvatarPicker.hidden = !(isRepresentative && isGroupRoom);
+            editGroupNameButton.hidden = !(isRepresentative && isGroupRoom);
+            activeChatName = activeButton?.dataset.displayName || nextName;
+            activeSubtitle = nextSubtitle;
+            activeAvatar.dataset.avatarUrl = avatarURL;
+            updateTitle();
+            setActiveContact(activeButton);
+            shell.classList.add("chat-mobile-open");
+            input.disabled = true;
+            submitButton.disabled = true;
+            statusLabel.textContent = "Conectando...";
+            statusLabel.classList.remove("online");
+            await Promise.all([
+                loadHistory(),
+                isGroupRoom ? refreshGroupAvatar(activeButton) : Promise.resolve(),
+            ]);
+            if (selection !== roomSelection || page.classList.contains("chat-conversation-exited")) return;
+            connect();
+            input.focus();
+        };
+
+        const renderRecent = () => {
+            recentList.replaceChildren();
+            recentContacts.forEach((contact) => createContact(contact, recentList));
+        };
+
+        const filterContacts = () => {
+            const term = normalizeSearch(searchInput.value.trim());
+            searchList.replaceChildren();
+            const searching = term.length > 0;
+            recentList.hidden = searching;
+            searchTitle.hidden = !searching;
+            searchList.hidden = !searching;
+            usersList.querySelector("[data-filter-empty]")?.remove();
+            if (!searching) return;
+            const matches = directory.filter((contact) => normalizeSearch(`${contact.name} ${contact.role}`).includes(term));
+            matches.forEach((contact) => createContact(contact, searchList, true));
+            if (!matches.length) {
+                const empty = document.createElement("p");
+                empty.className = "chat-contact-empty";
+                empty.dataset.filterEmpty = "true";
+                empty.textContent = "Nenhum funcionário encontrado.";
+                searchList.appendChild(empty);
+            }
+        };
+
+        generalContact.dataset.contactKind = "general";
+        generalContact.dataset.contactName = "chat setor representantes porto";
+        generalContact.dataset.defaultName = "Chat do setor";
+        generalContact.dataset.displayName = "";
+        generalContact.dataset.room = generalRoom;
+        generalContact.dataset.avatarUrl = "";
+        generalContact.querySelector("[data-unread-badge]").dataset.unreadRoom = generalRoom;
+        generalContact.addEventListener("click", () => {
+            searchInput.value = "";
+            filterContacts();
+            openRoom(generalRoom, generalContact.dataset.displayName || "Chat do Setor", `Todos os funcionários de ${setorVisual} - Porto ${porto}`, generalContact, generalContact.dataset.avatarUrl || "");
+        });
+
+        const createContact = ({ name, role, kind, meta, avatarURL, room: contactRoom, onClick }, targetList, searchResult = false) => {
+            const button = document.createElement("button");
+            button.className = "chat-contact";
+            button.type = "button";
+            button.dataset.contactKind = kind;
+            if (kind === "private") button.dataset.username = directory.find((person) => person.name === name)?.username || "";
+            button.dataset.contactName = `${name} ${role}`;
+            button.dataset.defaultName = name;
+            button.dataset.displayName = "";
+            button.dataset.room = contactRoom || "";
+            button.dataset.avatarUrl = avatarURL || "";
+
+            const avatar = document.createElement("span");
+            avatar.className = `chat-avatar${kind === "representatives" ? " chat-avatar-room" : ""}`;
+            setAvatar(avatar, name, avatarURL);
+
+            const main = document.createElement("span");
+            main.className = "chat-contact-main";
+            const title = document.createElement("strong");
+            title.textContent = name;
+            const subtitle = document.createElement("small");
+            subtitle.textContent = role;
+            main.append(title, subtitle);
+
+            const detail = document.createElement("span");
+            detail.className = "chat-contact-meta";
+            detail.appendChild(document.createTextNode(meta || ""));
+            if (contactRoom && !searchResult) {
+                const badge = document.createElement("span");
+                badge.className = "chat-unread-badge";
+                badge.dataset.unreadBadge = "true";
+                badge.dataset.unreadRoom = contactRoom;
+                badge.hidden = true;
+                detail.appendChild(badge);
+            }
+            button.append(avatar, main, detail);
+            button.addEventListener("click", () => onClick(button, searchResult));
+            targetList.appendChild(button);
+            return button;
+        };
+
+        const openPrivateConversation = async (contact, button) => {
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/conversations/${encodeURIComponent(contact.username)}?${params}`, { method: "POST" });
+                if (!response.ok) throw new Error("Falha ao abrir conversa");
+                const result = await response.json();
+                if (result.error) throw new Error(result.error);
+                const opened = { ...contact, room: result.room, kind: "private", meta: "privado" };
+                recentContacts.set(contact.username, opened);
+                renderRecent();
+                const recentButton = [...recentList.querySelectorAll(".chat-contact")]
+                    .find((item) => item.dataset.contactName === `${contact.name} ${contact.role}`);
+                searchInput.value = "";
+                filterContacts();
+                (recentButton || button).dataset.username = contact.username;
+                openRoom(result.room, contact.name, "", recentButton || button, contact.avatarURL);
+            } catch (error) {
+                showChatToast("Não foi possível abrir esta conversa. Verifique a conexão e tente novamente.", "error");
+            }
+        };
+
+        const loadContacts = async () => {
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/users?${params}`, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error("Falha ao carregar os contatos");
+                }
+                const payload = await response.json();
+                usersList.querySelector("[data-contacts-loading]")?.remove();
+
+                (payload.users || []).forEach((contact) => {
+                    const name = contact.display_name || contact.nome_completo || "Funcionário";
+                    const role = contact.role || (contact.poder_maior ? "Representante do Setor" : contact.cargo || "Setor não informado");
+                    directory.push({
+                        username: contact.username,
+                        name,
+                        role,
+                        avatarURL: contact.avatar_url || "",
+                        kind: "private",
+                        onClick: (button) => openPrivateConversation({ username: contact.username, name, role, avatarURL: contact.avatar_url || "" }, button),
+                    });
+                });
+
+                const openedResponse = await fetch(`/conversations?${params}`, { cache: "no-store" });
+                if (openedResponse.ok) {
+                    const openedPayload = await openedResponse.json();
+                    (openedPayload.conversations || []).forEach((item) => {
+                        const contact = directory.find((candidate) => candidate.username === item.username);
+                        if (contact) recentContacts.set(contact.username, {
+                            ...contact,
+                            room: item.room,
+                            kind: "private",
+                            meta: "privado",
+                            onClick: (button) => { button.dataset.username = contact.username; openRoom(item.room, contact.name, "", button, contact.avatarURL); },
+                        });
+                    });
+                }
+
+                if (isRepresentative && payload.representatives_count >= 1) {
+                    const groupName = "Chat dos Representantes do Setor";
+                    const groupDescription = `Representantes de ${setorVisual} - Porto ${porto}`;
+                    const groupContact = {
+                        name: groupName,
+                        role: groupDescription,
+                        kind: "representatives",
+                        room: representativesRoom,
+                        meta: "grupo",
+                        onClick: (button) => openRoom(
+                            representativesRoom,
+                            groupName,
+                            groupDescription,
+                            button,
+                            button.dataset.avatarUrl || "",
+                        ),
+                    };
+                    recentContacts.set(`representatives:${setor}`, groupContact);
+                }
+                if (isRepresentative) {
+                    const groupName = "Chat dos Representantes";
+                    const groupDescription = "Representantes de todos os setores e portos";
+                    const groupContact = {
+                        name: groupName,
+                        role: groupDescription,
+                        kind: "representatives",
+                        room: allRepresentativesRoom,
+                        meta: "grupo",
+                        onClick: (button) => openRoom(
+                            allRepresentativesRoom,
+                            groupName,
+                            groupDescription,
+                            button,
+                            button.dataset.avatarUrl || "",
+                        ),
+                    };
+                    recentContacts.set("all-representatives", groupContact);
+                }
+                renderRecent();
+                filterContacts();
+                await updateUnreadBadges();
+                await refreshGroupProfiles();
+            } catch (error) {
+                const loading = usersList.querySelector("[data-contacts-loading]");
+                if (loading) {
+                    const message = document.createElement("span");
+                    message.textContent = "Não foi possível carregar as conversas.";
+                    const retry = document.createElement("button");
+                    retry.className = "secondary-button chat-retry-button";
+                    retry.type = "button";
+                    retry.textContent = "Tentar novamente";
+                    retry.addEventListener("click", () => {
+                        message.textContent = "Carregando conversas...";
+                        retry.remove();
+                        loadContacts();
+                    }, { once: true });
+                    loading.replaceChildren(message, retry);
+                }
+            }
+        };
+
+        searchInput.addEventListener("input", () => {
+            filterContacts();
+        });
+
+        exitConversationButton.addEventListener("click", () => {
+            exitConversation();
+        });
+
+        chatMenuButton.addEventListener("click", () => {
+            chatMenu.hidden = !chatMenu.hidden;
+        });
+
+        document.addEventListener("click", (event) => {
+            if (!chatMenu.hidden && !event.target.closest(".chat-menu-wrap")) {
+                chatMenu.hidden = true;
+            }
+        });
+
+        deleteChatButton.addEventListener("click", async () => {
+            chatMenu.hidden = true;
+            const confirmed = await confirmChatAction(`Remover o histórico de “${activeChatName}” apenas da sua visualização?`, "Limpar meu histórico");
+            if (!confirmed) {
+                return;
+            }
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/history/${encodeURIComponent(room)}?${params}`, {
+                    method: "DELETE",
+                    cache: "no-store",
+                });
+                if (!response.ok) throw new Error("Falha ao apagar histórico");
+                clearMessages();
+                showChatToast("Histórico removido da sua visualização.");
+            } catch (error) {
+                showChatToast("Não foi possível apagar o histórico. Verifique a conexão e tente novamente.", "error");
+            }
+        });
+
+        const confirmChatAction = (text, title) => new Promise((resolve) => {
+            document.querySelector("[data-confirm-title]").textContent = title;
+            document.querySelector("[data-confirm-message]").textContent = text;
+            const action = document.querySelector("[data-confirm-action]");
+            action.onclick = () => confirmDialog.close("confirm");
+            confirmDialog.addEventListener("close", () => resolve(confirmDialog.returnValue === "confirm"), { once: true });
+            confirmDialog.showModal();
+        });
+        const showChatToast = (text, category = "success") => {
+            const toast = document.createElement("div");
+            toast.className = `app-toast app-toast-${category} chat-toast`;
+            toast.setAttribute("role", "status");
+            toast.textContent = text;
+            document.body.appendChild(toast);
+            window.setTimeout(() => toast.remove(), 2800);
+        };
+
+        groupAvatarFile.addEventListener("change", async () => {
+            const file = groupAvatarFile.files?.[0];
+            if (!file) return;
+            const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+            if (!allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
+                showChatToast("Escolha uma imagem JPG, PNG ou WebP de até 5 MB.", "error");
+                groupAvatarFile.value = "";
+                return;
+            }
+            const params = new URLSearchParams({ user, porto, setor, token });
+            groupAvatarPicker.classList.add("is-saving");
+            groupAvatarFile.disabled = true;
+            try {
+                const response = await fetch(`/room-avatar/${encodeURIComponent(room)}?${params}`, {
+                    method: "POST",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || "Falha ao trocar a foto.");
+                const avatarURL = payload.avatar_url || "";
+                activeAvatar.dataset.avatarUrl = avatarURL;
+                setAvatar(activeAvatar, activeChatName, avatarURL);
+                const groupButton = [generalContact, ...recentList.querySelectorAll('.chat-contact[data-room]')]
+                    .find((button) => button.dataset.room === room);
+                if (groupButton) {
+                    groupButton.dataset.avatarUrl = avatarURL;
+                    const listAvatar = groupButton.querySelector(".chat-avatar");
+                    if (listAvatar) setAvatar(listAvatar, groupButton.dataset.contactName || activeChatName, avatarURL);
+                }
+                showChatToast("Foto do grupo atualizada.");
+            } catch (error) {
+                showChatToast(error.message || "Não foi possível trocar a foto do grupo. Tente novamente.", "error");
+            } finally {
+                groupAvatarFile.disabled = false;
+                groupAvatarFile.value = "";
+                groupAvatarPicker.classList.remove("is-saving");
+            }
+        });
+
+        editGroupNameButton.addEventListener("click", () => {
+            if (editGroupNameButton.hidden || !room || !isRepresentative) return;
+            roomNameInput.value = activeChatName;
+            roomNameDialog.showModal();
+            roomNameInput.focus();
+            roomNameInput.select();
+        });
+
+        cancelRoomNameButton.addEventListener("click", () => roomNameDialog.close());
+        roomNameInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                saveRoomNameButton.click();
+            }
+        });
+
+        saveRoomNameButton.addEventListener("click", async () => {
+            const displayName = roomNameInput.value.trim();
+            if (!displayName) {
+                roomNameInput.setCustomValidity("Digite um nome para o grupo.");
+                roomNameInput.reportValidity();
+                return;
+            }
+            roomNameInput.setCustomValidity("");
+            if (displayName.length > 50) {
+                roomNameInput.setCustomValidity("O nome deve ter até 50 caracteres.");
+                roomNameInput.reportValidity();
+                return;
+            }
+
+            const params = new URLSearchParams({ user, porto, setor, token });
+            saveRoomNameButton.disabled = true;
+            try {
+                const response = await fetch(`/room-name/${encodeURIComponent(room)}?${params}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: displayName }),
+                });
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || "Não foi possível alterar o nome do grupo.");
+                document.querySelectorAll(".chat-contact[data-room]").forEach((button) => {
+                    if (button.dataset.room === room) setGroupDisplayName(button, payload.display_name);
+                });
+                if (generalContact.dataset.room === room) setGroupDisplayName(generalContact, payload.display_name);
+                activeChatName = payload.display_name;
+                activeName.textContent = payload.display_name;
+                roomNameDialog.close();
+                showChatToast("Nome do grupo atualizado para todos os participantes.");
+            } catch (error) {
+                showChatToast(error.message || "Não foi possível alterar o nome do grupo. Tente novamente.", "error");
+            } finally {
+                saveRoomNameButton.disabled = false;
+            }
+        });
+
+        closeChatButton.addEventListener("click", async () => {
+            chatMenu.hidden = true;
+            if (!activeContactUsername) return;
+            const params = new URLSearchParams({ user, porto, setor, token });
+            try {
+                const response = await fetch(`/conversations/${encodeURIComponent(activeContactUsername)}?${params}`, { method: "DELETE" });
+                if (!response.ok) throw new Error("Falha ao fechar conversa");
+                recentContacts.delete(activeContactUsername);
+                renderRecent();
+                searchInput.value = "";
+                filterContacts();
+                await openRoom(generalRoom, "Chat do setor", "", generalContact, "");
+                showChatToast("Conversa fechada. O histórico foi preservado.");
+            } catch (error) {
+                showChatToast("Não foi possível fechar a conversa. Verifique a conexão e tente novamente.", "error");
+            }
+        });
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+            if (socket?.readyState !== WebSocket.OPEN) {
+                setNetworkNote("A mensagem não foi enviada. O texto continua no campo; tente novamente quando a conexão voltar.");
+                return;
+            }
+            if (pendingMessage) return;
+            pendingMessage = text;
+            input.disabled = true;
+            submitButton.disabled = true;
+            setNetworkNote("Enviando mensagem...");
+            try {
+                socket.send(text);
+                pendingMessageTimer = window.setTimeout(() => {
+                    if (!pendingMessage) return;
+                    pendingMessage = "";
+                    pendingMessageTimer = null;
+                    input.disabled = socket?.readyState !== WebSocket.OPEN;
+                    submitButton.disabled = false;
+                    setNetworkNote("Ainda não recebemos confirmação do envio. O texto foi mantido para você tentar novamente.");
+                }, 10000);
+            } catch (error) {
+                pendingMessage = "";
+                input.disabled = false;
+                submitButton.disabled = false;
+                setNetworkNote("A mensagem não foi enviada. O texto continua no campo; tente novamente.");
+            }
+        });
+
+        setAvatar(selfAvatar, fullName, page.dataset.avatarUrl);
+        activeAvatar.dataset.avatarUrl = "";
+        updateTitle();
+        filterContacts();
+        loadContacts();
+        refreshGroupAvatar(generalContact);
+        exitConversation();
+        window.setInterval(refreshGroupProfiles, 30000);
+        let unreadRefreshTimer;
+        const scheduleUnreadRefresh = () => {
+            window.clearTimeout(unreadRefreshTimer);
+            unreadRefreshTimer = window.setTimeout(async () => {
+                await updateUnreadBadges();
+                scheduleUnreadRefresh();
+            }, document.visibilityState === "visible" ? 6000 : 20000);
+        };
+        const refreshUnreadWhenVisible = () => {
+            if (document.visibilityState !== "visible") return;
+            window.clearTimeout(unreadRefreshTimer);
+            updateUnreadBadges().finally(scheduleUnreadRefresh);
+        };
+        refreshUnreadWhenVisible();
+        window.addEventListener("focus", refreshUnreadWhenVisible);
+        window.addEventListener("online", refreshUnreadWhenVisible);
+        document.addEventListener("visibilitychange", refreshUnreadWhenVisible);
+    </script>
+</body>
+</html>

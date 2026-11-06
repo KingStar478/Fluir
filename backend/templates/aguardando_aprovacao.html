@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Aguardando aprovação - Fluir{% endblock %}
+{% block body %}
+<main class="approval-wait-page" data-approval-wait data-status="{{ status }}">
+    <section class="approval-wait-card">
+        <a class="approval-brand" href="{{ url_for('login') }}">Fluir</a>
+        <div class="approval-orbit" aria-hidden="true"><span>✓</span></div>
+        <p class="approval-kicker">ACESSO AO SISTEMA</p>
+        <h1 data-wait-title>{% if status == 'rejeitada' %}Solicitação não aprovada{% else %}Estamos conferindo seu cadastro{% endif %}</h1>
+        <p data-wait-message>{% if status == 'rejeitada' %}Seu acesso continua bloqueado. Você pode enviar uma contestação para nova análise.{% elif status == 'revisao' %}Sua solicitação foi encaminhada a um representante para nova análise.{% else %}Olá, {{ nome }}. Sua solicitação foi recebida e está aguardando análise.{% endif %}</p>
+        <div class="approval-wait-status"><span data-wait-dot></span><strong data-wait-status>{% if status == 'rejeitada' %}Cadastro rejeitado{% elif status == 'revisao' %}Em nova análise{% else %}Pendente de aprovação{% endif %}</strong></div>
+        {% if status == 'rejeitada' %}
+            {% if motivo_rejeicao %}<div class="approval-rejection-reason"><strong>Justificativa da rejeição</strong><p>{{ motivo_rejeicao }}</p></div>{% endif %}
+            <details class="approval-appeal">
+                <summary>Caso você ache a rejeição injusta, aperte aqui:</summary>
+                <form action="{{ url_for('contestar_rejeicao_cadastro') }}" method="post" enctype="multipart/form-data" class="form-stack">
+                    <label>Sua justificativa (opcional)<textarea name="justificativa" maxlength="2000"></textarea></label>
+                    <label>Imagens (opcional, até 3)<input type="file" name="imagens" accept="image/jpeg,image/png,image/webp" multiple data-max-files="3"></label>
+                    <small class="field-help">Inclua no máximo 3 imagens JPG, PNG ou WebP.</small>
+                    <button class="primary-button" type="submit">Enviar contestação</button>
+                </form>
+            </details>
+        {% endif %}
+        <a class="secondary-button" href="{{ url_for('login') }}">Voltar ao login</a>
+    </section>
+</main>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="app-toast app-toast-{{ category }}" role="status">{{ message }}</div>{% endfor %}{% endwith %}
+{% if status in ['pendente', 'revisao'] %}<script>
+(() => {
+    const page = document.querySelector('[data-approval-wait]');
+    const title = document.querySelector('[data-wait-title]');
+    const message = document.querySelector('[data-wait-message]');
+    const status = document.querySelector('[data-wait-status]');
+    const check = async () => {
+        try {
+            const response = await fetch('{{ url_for("status_cadastro_pendente") }}', { cache: 'no-store' });
+            const data = await response.json();
+            if (data.status === 'aprovada') { status.textContent = 'Cadastro aprovado'; message.textContent = 'Seu acesso foi liberado. Estamos levando você ao Fluir.'; window.location.assign(data.redirect); }
+            else if (data.status === 'rejeitada') { window.location.reload(); }
+            else if (data.status === 'revisao') { page.dataset.status = 'revisao'; title.textContent = 'Solicitação em nova análise'; message.textContent = 'Sua solicitação foi encaminhada a um representante para nova análise.'; status.textContent = 'Em nova análise'; }
+        } catch (_) { }
+    };
+    window.setInterval(check, 5000);
+})();
+</script>{% endif %}
+{% endblock %}

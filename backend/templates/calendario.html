@@ -1,0 +1,289 @@
+{% extends "app_base.html" %}
+
+{% block title %}Calendário - Fluir{% endblock %}
+{% block page_title %}Calendário{% endblock %}
+{% block page_subtitle %}{% endblock %}
+
+{% block content %}
+<div class="calendar-toolbar calendar-toolbar-modern">
+    <div>
+        <h2>{{ mes_nome }}, {{ ano }}</h2>
+    </div>
+    <div class="calendar-actions {% if not is_admin %}calendar-actions-readonly{% endif %}">
+        <nav class="calendar-month-switch" aria-label="Navegação entre meses">
+            <a class="secondary-button calendar-icon-button" href="{{ url_for('calendario', ano=ano_anterior, mes=mes_anterior) }}" aria-label="Mês anterior" title="Mês anterior">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </a>
+            <a class="secondary-button calendar-nav-button calendar-today-button" href="{{ url_for('calendario') }}">Hoje</a>
+            <a class="secondary-button calendar-icon-button" href="{{ url_for('calendario', ano=proximo_ano, mes=proximo_mes) }}" aria-label="Próximo mês" title="Próximo mês">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+        </nav>
+        <a class="secondary-button calendar-utility-button" href="{{ url_for('historico_navios') }}" aria-label="Histórico de Navios" title="Histórico de Navios">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h18l-3 4H7l-4-4Z"/><path d="M12 3v14M12 5l6 4h-6M10 8H5l7-5"/></svg>
+        </a>
+        {% if is_admin %}
+            <button class="secondary-button calendar-utility-button" type="button" data-schedule-open aria-label="Novo agendamento" title="Novo agendamento">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+        {% else %}
+        {% endif %}
+        <div class="legend-help">
+            <button class="help-button" type="button" aria-label="Explicar tipos de carga">?</button>
+            <div class="legend-popover cargo-help-popover" role="tooltip">
+                <strong>Tipos de carga</strong>
+                {% for tipo, item in legenda.items() %}
+                    <div class="legend-item cargo-help-item calendar-color-{{ tipo }}">
+                        <span class="legend-color calendar-color-{{ tipo }}"></span>
+                        <div>
+                            <b>{{ item.label }}</b>
+                            <small>{{ item.navio }}</small>
+                            <small>{{ item.descricao }}</small>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="cargo-legend" aria-label="Legenda por tipo de carga">
+    {% for tipo, item in legenda.items() %}
+        <span class="cargo-legend-chip calendar-color-{{ tipo }}">{{ item.label }}</span>
+    {% endfor %}
+</section>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="app-toast app-toast-{{ category }}" role="status">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+{% if is_admin and pendencias_saida %}
+    {% set navio_pendente = pendencias_saida[0] %}
+    <section class="departure-confirmation-card" aria-labelledby="departure-confirmation-title">
+        <span class="departure-confirmation-kicker">Confirmação de saída</span>
+        <h2 id="departure-confirmation-title">O navio {{ navio_pendente.nome_embarcacao or 'agendado' }} já saiu do porto?</h2>
+        <p>O horário previsto de saída (ETS) passou. Confirme para manter o histórico correto.</p>
+        <div class="departure-confirmation-meta">
+            <span>ETS previsto</span>
+            <strong>{{ navio_pendente.ets.strftime('%d/%m/%Y às %H:%M') }}</strong>
+            {% if navio_pendente.numero_viagem %}<span>Viagem</span><strong>{{ navio_pendente.numero_viagem }}</strong>{% endif %}
+        </div>
+        <form class="departure-confirmation-actions" action="{{ url_for('confirmar_saida_navio', agendamento_id=navio_pendente.id) }}" method="post">
+            <button class="primary-button" type="submit" name="decisao" value="saiu">Sim, saiu — mover ao histórico</button>
+            <button class="secondary-button" type="submit" name="decisao" value="adiar">Ainda não — perguntar em uma semana</button>
+        </form>
+        {% if pendencias_saida|length > 1 %}<small class="departure-confirmation-next">Há mais {{ pendencias_saida|length - 1 }} navio(s) para confirmar.</small>{% endif %}
+    </section>
+{% endif %}
+
+<section class="calendar-shell calendar-shell-modern">
+    <div class="calendar-head">
+        {% for dia in ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"] %}
+            <div>{{ dia }}</div>
+        {% endfor %}
+    </div>
+    <div class="calendar-grid">
+        {% for _ in range(espacos_inicio) %}
+            <article class="calendar-day calendar-day-empty" aria-hidden="true"></article>
+        {% endfor %}
+        {% for numero in range(1, dias_no_mes + 1) %}
+            <article class="calendar-day {% if ano == hoje.year and mes == hoje.month and numero == hoje.day %}calendar-day-today{% endif %}">
+                <div class="calendar-day-number">{{ numero }}</div>
+                <div class="calendar-day-events">
+                    {% for evento in eventos.get(numero, []) %}
+                        <button
+                            class="calendar-event calendar-color-{{ evento.tipo }} {% if not evento.embarcacao_informada %}calendar-event-missing-vessel{% endif %}"
+                            type="button"
+                            data-event-details="{{ evento | tojson | forceescape }}"
+                        >
+                            <strong>{{ evento.texto }}</strong>
+                            <span>{{ evento.tipo_carga }}</span>
+                            <small>ETA {{ evento.eta }}</small>
+                        </button>
+                    {% endfor %}
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+
+{% if is_admin %}
+<div class="event-modal" data-schedule-modal hidden>
+    <div class="event-modal-backdrop" data-schedule-close></div>
+    <section class="event-modal-card schedule-modal-card" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
+        <header class="event-modal-header">
+            <div>
+                <span class="event-modal-type">Novo agendamento logístico</span>
+                <h2 id="schedule-modal-title">Cadastrar operação</h2>
+            </div>
+            <button class="event-modal-close" type="button" data-schedule-close aria-label="Fechar cadastro">x</button>
+        </header>
+        <form class="schedule-form" action="{{ url_for('novo_agendamento') }}" method="post">
+            <section class="schedule-section">
+                <h3>Carga e navio</h3>
+                <div class="form-grid">
+                    <label>Tipo de carga
+                        <select name="tipo_carga" required>
+                            <option value="">Selecione</option>
+                            <option>Carga Conteinerizada</option>
+                            <option>Carga a Granel</option>
+                            <option>Carga Geral</option>
+                            <option>Carga Rolante</option>
+                            <option>Carga Frigorífica</option>
+                            <option>Carga Viva</option>
+                        </select>
+                    </label>
+                    <label>Tipo de navio
+                        <input name="tipo_navio" placeholder="Ex.: Graneleiro, Petroleiro, Ro-Ro" required>
+                    </label>
+                </div>
+                <div class="form-grid">
+                    <label>FCL ou LCL
+                        <select name="fcl_lcl" required>
+                            <option value="">Selecione</option>
+                            <option>FCL</option>
+                            <option>LCL</option>
+                            <option>Não se aplica</option>
+                        </select>
+                    </label>
+                    <label>Temperatura exigida
+                        <input name="temperatura" placeholder="Ex.: -18 C, 2 C a 8 C, ambiente">
+                    </label>
+                </div>
+                <label>Quanto cabe em cada navio
+                    <input name="capacidade_navio" placeholder="Ex.: 2.800 TEU, 45.000 t, 400 veículos" required>
+                </label>
+                <label>Plano de carga
+                    <textarea name="plano_carga" rows="4" placeholder="Distribuição, prioridade, sequência de carga/descarga e restrições" required></textarea>
+                </label>
+            </section>
+
+            <section class="schedule-section">
+                <h3>Janela operacional</h3>
+                <div class="form-grid">
+                    <label>ETA
+                        <input name="eta" type="datetime-local" required>
+                    </label>
+                    <label>ETB
+                        <input name="etb" type="datetime-local" required>
+                    </label>
+                    <label>ETS
+                        <input name="ets" type="datetime-local" required>
+                    </label>
+                    <label>Gate Cut-off
+                        <input name="gate_cutoff" type="datetime-local" required>
+                    </label>
+                    <label>Cargo/Doc Cut-off
+                        <input name="cargo_doc_cutoff" type="datetime-local" required>
+                    </label>
+                </div>
+            </section>
+
+            <section class="schedule-section">
+                <h3>Embarcação</h3>
+                <div class="form-grid">
+                    <label>Nome da embarcação
+                        <input name="nome_embarcacao" placeholder="Ex.: Fluir Manaus I" required>
+                    </label>
+                    <label>Número da viagem
+                        <input name="numero_viagem" placeholder="Ex.: VLG-026" required>
+                    </label>
+                    <label>Armador
+                        <input name="armador" placeholder="Ex.: Navegação Amazônica" required>
+                    </label>
+                    <label>Calado
+                        <input name="calado" placeholder="Ex.: 8,2 m" required>
+                    </label>
+                    <label>Bandeira de registro
+                        <input name="bandeira" placeholder="Ex.: Brasil" required>
+                    </label>
+                    <label>Peso bruto carregado
+                        <input name="peso_bruto" placeholder="Ex.: 1.250 t" required>
+                    </label>
+                </div>
+                <label>Dimensões estruturais
+                    <input name="dimensoes" placeholder="Ex.: 180 m x 28 m" required>
+                </label>
+                <label>Portos de escala
+                    <textarea name="portos_escala" rows="3" placeholder="Ex.: Manaus > Santarém > Belém > Santos"></textarea>
+                </label>
+                <label>Observação operacional
+                    <textarea name="observacao" rows="4" placeholder="Riscos, dependências, documentos pendentes ou orientações para a equipe" required></textarea>
+                </label>
+            </section>
+
+            <button class="primary-button" type="submit">Salvar agendamento</button>
+        </form>
+    </section>
+</div>
+{% endif %}
+
+<div class="event-modal" data-event-modal hidden>
+    <div class="event-modal-backdrop" data-event-close></div>
+    <section class="event-modal-card event-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
+        <header class="event-modal-header">
+            <div>
+                <span class="event-modal-type" data-event-type></span>
+                <h2 id="event-modal-title" data-event-title></h2>
+            </div>
+            <button class="event-modal-close" type="button" data-event-close aria-label="Fechar detalhes">x</button>
+        </header>
+        <div class="event-summary-grid event-summary-grid-modern">
+            <div><span>Status</span><strong data-event-status></strong></div>
+            <div><span>Tipo de carga</span><strong data-event-carga></strong></div>
+            <div><span>Navio ideal</span><strong data-event-navio-ideal></strong></div>
+            <div><span>FCL/LCL</span><strong data-event-fcl-lcl></strong></div>
+        </div>
+        {% if is_admin %}
+            <form class="event-status-form" data-event-status-form method="post">
+                <label for="event-operational-status">Status da passagem pelo porto</label>
+                <select id="event-operational-status" name="status">
+                    <option>Agendado</option>
+                    <option>Atrasado</option>
+                    <option>No porto</option>
+                    <option>Concluído</option>
+                </select>
+                <button class="secondary-button" type="submit">Atualizar status</button>
+                <small>Somente marque “Concluído” após a saída efetiva do navio.</small>
+            </form>
+            <form class="event-complete-form" data-event-complete-form method="post" hidden>
+                <button class="primary-button" type="submit">Concluído — mover ao histórico</button>
+                <small>Use quando o navio sair antes do horário previsto.</small>
+            </form>
+        {% endif %}
+        <div class="event-detail-grid event-detail-grid-modern">
+            <div><span>Tipo de navio</span><strong data-event-tipo-navio></strong></div>
+            <div><span>Temperatura</span><strong data-event-temperatura></strong></div>
+            <div><span>Capacidade do navio</span><strong data-event-capacidade></strong></div>
+            <div><span>ETA</span><strong data-event-eta></strong></div>
+            <div><span>ETB</span><strong data-event-etb></strong></div>
+            <div><span>ETS</span><strong data-event-ets></strong></div>
+            <div><span>Nome da embarcação</span><strong data-event-embarcacao></strong></div>
+            <div><span>Número da viagem</span><strong data-event-viagem></strong></div>
+            <div><span>Armador</span><strong data-event-armador></strong></div>
+            <div><span>Calado</span><strong data-event-calado></strong></div>
+            <div><span>Bandeira</span><strong data-event-bandeira></strong></div>
+            <div><span>Peso bruto</span><strong data-event-peso></strong></div>
+            <div><span>Dimensões</span><strong data-event-dimensoes></strong></div>
+            <div><span>Gate Cut-off</span><strong data-event-gate-cutoff></strong></div>
+            <div><span>Cargo/Doc Cut-off</span><strong data-event-cargo-doc-cutoff></strong></div>
+        </div>
+        <div class="event-text-blocks">
+            <div class="event-observation">
+                <span>Plano de carga</span>
+                <p data-event-plano-carga></p>
+            </div>
+            <div class="event-observation">
+                <span>Portos de escala</span>
+                <p data-event-portos-escala></p>
+            </div>
+            <div class="event-observation">
+                <span>Observação operacional</span>
+                <p data-event-observacao></p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

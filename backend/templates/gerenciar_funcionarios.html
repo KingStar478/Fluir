@@ -1,0 +1,134 @@
+{% extends "app_base.html" %}
+
+{% block page_title %}Funcionários e permissões{% endblock %}
+{% block page_subtitle %}{% endblock %}
+
+{% block content %}
+<section class="card employee-admin-intro">
+    <div>
+        <h2>{% if representante %}Funcionários e solicitações{% else %}Solicitações pendentes{% endif %}</h2>
+        <p>{{ total }} registro(s) encontrado(s).</p>
+    </div>
+    <form class="employee-admin-search" method="get" action="{{ url_for('gerenciar_funcionarios') }}">
+        <label for="employee-role-filter">Cargo</label>
+        <div class="employee-search-controls"><select id="employee-role-filter" name="cargo" aria-label="Filtrar por cargo"><option value="">Todos os cargos</option>{% for cargo_opcao in cargos_funcionario %}<option value="{{ cargo_opcao }}" {% if filtro_cargo == cargo_opcao %}selected{% endif %}>{{ cargo_exibicao(cargo_opcao) }}</option>{% endfor %}</select><input id="employee-search" type="search" name="q" value="{{ termo }}" placeholder="Buscar funcionário pelo nome" aria-label="Buscar funcionário pelo nome"><button class="primary-button" type="submit">Buscar</button></div>
+    </form>
+</section>
+
+{% set status_labels = {'pendente': 'Cadastros pendentes', 'revisao': 'Revisões após rejeição', 'aprovada': 'Funcionários aprovados', 'rejeitada': 'Cadastros rejeitados'} %}
+{% for status in ['pendente', 'revisao', 'aprovada', 'rejeitada'] %}
+    {% set status_groups = grupos[status] %}
+    {% if status_groups or (representante and status == 'aprovada') or (representante and status == 'rejeitada') %}
+    <section class="employee-admin-section">
+        <header class="employee-section-heading">
+            <div><h2>{{ status_labels[status] }}</h2></div>
+            <span>{{ status_groups|length }} cargo(s)</span>
+        </header>
+        {% if status_groups %}
+            {% for cargo, funcionarios in status_groups.items() %}
+            <section class="employee-role-group">
+                <h3>{{ cargo }} <small>{{ funcionarios|length }}</small></h3>
+                <div class="employee-list">
+                {% for funcionario in funcionarios %}
+                    <article class="employee-record">
+                        <div class="employee-record-header">
+                            <div class="employee-identity">
+                                <span class="employee-avatar">
+                                    {% if funcionario.avatar_path %}<img src="{{ url_for('static', filename=funcionario.avatar_path) }}" alt="" loading="lazy">{% else %}{{ funcionario.nome_completo[:1]|upper }}{% endif %}
+                                </span>
+                                <div><strong>{{ funcionario.nome_completo }}</strong><small>{{ cargo_exibicao(funcionario.cargo) }}</small></div>
+                            </div>
+                            <span class="employee-status employee-status-{{ status }}">{{ {'pendente': 'Pendente de aprovação', 'revisao': 'Contestação enviada', 'aprovada': 'Aprovado', 'rejeitada': 'Rejeitado'}[status] }}</span>
+                        </div>
+                        {% if representante %}
+                        <details class="employee-details employee-manager-tools">
+                            <summary>{% if status == 'aprovada' and funcionario.username != session.get('usuario') %}Dados e edição do funcionário{% else %}Consultar dados completos{% endif %}</summary>
+                            <dl>
+                                <div><dt>E-mail</dt><dd>{{ funcionario.email or 'Não informado' }}</dd></div>
+                                <div><dt>Identificação interna</dt><dd>{{ funcionario.identificacao_interna }}</dd></div>
+                                <div><dt>Data de nascimento</dt><dd>{{ funcionario.data_nascimento or 'Cadastro sem data de nascimento registrada' }}</dd></div>
+                                <div><dt>Código do Porto</dt><dd>{{ funcionario.codigo_porto }}</dd></div>
+                                <div><dt>Tipo de usuário</dt><dd>{{ 'Representante do setor' if funcionario.poder_maior else 'Funcionário comum' }}</dd></div>
+                                {% if fiscalizacao %}<div><dt>Último acesso</dt><dd>{{ funcionario.last_access_at.strftime('%d/%m/%Y %H:%M') if funcionario.last_access_at else 'Ainda não acessou' }}</dd></div>{% endif %}
+                                <div><dt>Situação</dt><dd>{{ status_labels[status] }}</dd></div>
+                                {% if status == 'aprovada' %}<div><dt>Aprovado por</dt><dd>{{ funcionario.aprovado_por }}</dd></div><div><dt>Data da aprovação</dt><dd>{{ funcionario.aprovado_em if funcionario.aprovado_em != 'Não disponível' else 'Aprovação anterior ao histórico atual' }}</dd></div>{% endif %}
+                                <div><dt>Senha</dt><dd>Protegida; redefina abaixo se necessário.</dd></div>
+                            </dl>
+                            {% if status == 'aprovada' and funcionario.username != session.get('usuario') %}
+                            <form class="form-stack employee-full-edit-form" action="{{ url_for('editar_funcionario', funcionario_id=funcionario.id) }}" method="post">
+                                <label>Nome completo<input name="nome_completo" data-email-name value="{{ funcionario.nome_completo }}" required></label>
+                                <label>Identificação interna<input name="identificacao_interna" value="{{ funcionario.identificacao_interna }}" maxlength="20" required></label>
+                                <label>E-mail de acesso<input type="email" name="email" value="{{ funcionario.email or '' }}" maxlength="254" autocomplete="email" required></label>
+                                <label>Data de nascimento<input name="data_nascimento" type="date" value="{{ formatar_data_input(funcionario.data_nascimento) }}"></label>
+                                <label>Cargo ou setor<select name="cargo" required>{% for cargo_opcao in cargos_funcionario %}<option value="{{ cargo_opcao }}" {% if funcionario.cargo == cargo_opcao %}selected{% endif %}>{{ cargo_exibicao(cargo_opcao) }}</option>{% endfor %}</select></label>
+                                <label>Porto associado<input value="{{ funcionario.codigo_porto }}" readonly></label>
+                                <label class="checkbox-row"><input type="checkbox" name="representante" value="sim" {% if funcionario.poder_maior %}checked{% endif %}><span>Responsável autorizado</span></label>
+                                <small class="field-help">Ativado, libera as permissões de responsável: calendário, chats de representantes e gestão de funcionários deste porto.</small>
+                                <button class="primary-button" type="submit">Salvar alterações</button>
+                            </form>
+                            <form class="employee-password-reset" action="{{ url_for('redefinir_senha_funcionario', funcionario_id=funcionario.id) }}" method="post" data-confirm-title="Redefinir senha" data-confirm-action="Redefinir" data-confirm-message="Redefinir a senha de {{ funcionario.nome_completo|e }} para 12345? No próximo acesso, será obrigatório cadastrar uma nova senha.">
+                                <button class="secondary-button" type="submit">Redefinir senha para 12345</button>
+                            </form>
+                            <form class="employee-delete-form" action="{{ url_for('excluir_funcionario', funcionario_id=funcionario.id) }}" method="post" data-confirm-title="Confirmar exclusão" data-confirm-action="Excluir" data-confirm-message="Excluir a conta de {{ funcionario.nome_completo|e }}? Mensagens e registros históricos serão mantidos.">
+                                <input type="hidden" name="confirmar" value="sim"><button class="secondary-button employee-delete-button" type="submit">Excluir funcionário</button>
+                            </form>
+                            {% endif %}
+                        </details>
+                        {% elif status == 'pendente' %}
+                        <p class="employee-request-context">{{ funcionario.email or 'E-mail não informado' }} · Porto {{ funcionario.codigo_porto }}</p>
+                        {% endif %}
+
+                        {% if not representante and status == 'aprovada' and funcionario.cargo == 'Fiscalizacao e Controle' and funcionario.username != session.get('usuario') %}
+                        <form class="employee-password-reset" action="{{ url_for('redefinir_senha_funcionario', funcionario_id=funcionario.id) }}" method="post" data-confirm-title="Redefinir senha" data-confirm-action="Redefinir" data-confirm-message="Redefinir a senha de {{ funcionario.nome_completo|e }} para 12345? No próximo acesso, será obrigatório cadastrar uma nova senha.">
+                            <button class="secondary-button" type="submit">Redefinir senha para 12345</button>
+                        </form>
+                        {% endif %}
+
+                        {% if representante and funcionario.justificativa_rejeicao %}<div class="employee-readonly-note"><strong>Justificativa da rejeição:</strong> {{ funcionario.justificativa_rejeicao }}</div>{% endif %}
+                        {% if representante and (funcionario.justificativa_contestacao or funcionario.imagens_contestacao) %}<div class="employee-readonly-note"><strong>Contestação:</strong> {{ funcionario.justificativa_contestacao or 'Sem justificativa em texto.' }}{% if funcionario.imagens_contestacao %}<div class="employee-appeal-images">{% for imagem in funcionario.imagens_contestacao %}<a href="{{ url_for('visualizar_imagem_contestacao', filename=imagem.split('/')[-1]) }}" target="_blank" rel="noopener">Ver imagem {{ loop.index }}</a>{% endfor %}</div>{% endif %}</div>{% endif %}
+
+                        {% if not representante and status == 'aprovada' and not funcionario.poder_maior and funcionario.username != session.get('usuario') %}
+                        <form class="employee-decision-actions" action="{{ url_for('promover_representante_funcionario', funcionario_id=funcionario.id) }}" method="post" data-confirm-title="Confirmar promoção" data-confirm-action="Promover" data-confirm-message="Promover {{ funcionario.nome_completo|e }} a representante da Fiscalização e Controle?">
+                            <button class="primary-button" type="submit">Promover a representante</button>
+                        </form>
+                        {% endif %}
+
+                        {% if status in ['pendente', 'revisao'] %}
+                            {% if representante or funcionario.cargo != 'Fiscalizacao e Controle' %}
+                            {% if funcionario.justificativa_rejeicao %}<div class="employee-readonly-note"><strong>Justificativa enviada:</strong> {{ funcionario.justificativa_rejeicao }}</div>{% endif %}
+                            <div class="employee-decision-actions">
+                                <form action="{{ url_for('decidir_cadastro_funcionario', funcionario_id=funcionario.id) }}" method="post"><input type="hidden" name="decisao" value="aprovar"><button class="primary-button" type="submit">{% if status == 'revisao' %}Aprovar cadastro{% else %}Aprovar{% endif %}</button></form>
+                                <form class="employee-rejection-form" action="{{ url_for('decidir_cadastro_funcionario', funcionario_id=funcionario.id) }}" method="post"><input type="hidden" name="decisao" value="rejeitar">{% if not representante %}<label>Justificativa<textarea name="justificativa" required maxlength="1000"></textarea></label>{% endif %}<button class="secondary-button" type="submit">{% if status == 'revisao' %}Confirmar rejeição{% else %}Rejeitar{% endif %}</button></form>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+
+                    </article>
+                {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        {% else %}
+            <div class="employee-admin-empty"><strong>Nenhum cadastro nesta seção.</strong><p>Quando houver registros, eles aparecerão aqui agrupados por cargo.</p></div>
+        {% endif %}
+    </section>
+    {% endif %}
+{% endfor %}
+
+{% if total == 0 %}
+<div class="employee-admin-empty employee-search-empty"><strong>Nenhum registro encontrado.</strong><p>Altere o nome ou o filtro de cargo e tente novamente.</p></div>
+{% endif %}
+
+{% if representante %}
+<details class="card employee-audit">
+    <summary>Histórico de ações administrativas</summary>
+    {% if historico %}
+    <div class="employee-audit-list">
+        {% for acao in historico %}
+        <article><strong>{{ acao.ator_nome }}</strong> {{ {'aprovar': 'aprovou', 'rejeitar': 'rejeitou', 'rejeicao_solicitada': 'solicitou a rejeição de', 'rejeicao_confirmada': 'confirmou a rejeição de', 'contestacao': 'enviou contestação para', 'edicao': 'alterou os dados de', 'exclusao': 'excluiu', 'redefinicao_senha': 'redefiniu a senha de', 'promocao_representante': 'promoveu a representante'}[acao.acao] }} <strong>{{ acao.funcionario_nome }}</strong><small>{{ acao.criado_em.strftime('%d/%m/%Y às %H:%M') }}{% if acao.detalhe_exibicao %} · {{ acao.detalhe_exibicao }}{% endif %}</small></article>
+        {% endfor %}
+    </div>
+    {% else %}<p>Nenhuma ação administrativa registrada.</p>{% endif %}
+</details>
+{% endif %}
+{% endblock %}

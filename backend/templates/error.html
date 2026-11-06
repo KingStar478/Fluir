@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}{{ status_code }} - Fluir{% endblock %}
+
+{% block body %}
+<main class="error-page">
+    <section class="error-card" role="alert">
+        <span class="error-code">{{ status_code }} · FLUIR</span>
+        <h1>{{ title }}</h1>
+        <p>{{ message }}</p>
+        <div class="error-actions">
+            {% if session.get('logado') %}
+            <a class="primary-button" href="{{ url_for('home') }}">Voltar ao painel</a>
+            {% else %}
+            <a class="primary-button" href="{{ url_for('login') }}">Ir para o login</a>
+            {% endif %}
+            {% if status_code == 400 %}
+            <button class="secondary-button" type="button" onclick="window.history.back()">Voltar e revisar os dados</button>
+            {% else %}
+            <button class="secondary-button" type="button" onclick="window.location.reload()">Tentar novamente</button>
+            {% endif %}
+        </div>
+    </section>
+</main>
+{% endblock %}

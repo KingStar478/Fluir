@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Fluir{% endblock %}</title>
+    {% block head_extra %}{% endblock %}
+    <script>
+        (() => {
+            const guestPage = ["/login", "/cadastro"].includes(window.location.pathname);
+            const themeCookie = document.cookie.split("; ").find((item) => item.startsWith("fluir-theme="));
+            const saved = themeCookie ? themeCookie.split("=")[1] : localStorage.getItem("fluir-theme");
+            const theme = guestPage ? "dark" : (saved || "dark");
+            document.documentElement.dataset.theme = theme;
+            localStorage.setItem("fluir-theme", theme);
+            document.cookie = `fluir-theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css', v='20261106-1') }}">
+</head>
+<body>
+    <div class="offline-status" data-offline-status role="status" aria-live="polite" hidden></div>
+    {% block body %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/app.js', v='20261106-1') }}"></script>
+</body>
+</html>

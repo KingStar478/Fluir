@@ -1,0 +1,85 @@
+{% extends "app_base.html" %}
+
+{% block page_title %}Perfil e configurações da conta{% endblock %}
+{% block page_subtitle %}{% endblock %}
+
+{% block content %}
+<div class="profile-layout">
+    <section class="card profile-card profile-card-hero">
+        <h2>Meu perfil</h2>
+        <div class="profile-photo-row">
+            <form action="{{ url_for('atualizar_foto_perfil') }}" method="post" enctype="multipart/form-data" class="profile-photo-form" data-profile-photo-form>
+            <label class="profile-avatar profile-avatar-picker" title="Clique ou arraste uma foto para alterar" aria-label="Alterar foto de perfil">
+                <span>{{ usuario.nome_completo[:1]|upper }}</span>
+                {% if avatar_url %}<img data-profile-preview src="{{ avatar_url }}" alt="Foto de perfil de {{ usuario.nome_completo }}" loading="eager" onerror="this.remove()">{% else %}<img data-profile-preview alt="Prévia da foto de perfil" hidden>{% endif %}
+                <input type="file" name="foto" accept="image/jpeg,image/png,image/webp" data-profile-file required>
+            </label>
+            <div class="profile-photo-actions">
+                <strong>{{ usuario.nome_completo }}</strong>
+                <small>{{ setor_exibicao }} · Porto {{ porto.nome_porto if porto else usuario.codigo_porto }}</small>
+                <button class="primary-button profile-save-photo" type="submit" data-save-profile-photo hidden>Salvar foto</button>
+                {% if avatar_url %}<button class="secondary-button" type="submit" formaction="{{ url_for('remover_foto_perfil') }}" formnovalidate>Remover foto</button>{% endif %}
+            </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card profile-card profile-card-account">
+        <h2>Dados da conta</h2>
+        {% if editando_dados %}
+        <form class="form-stack" method="post" action="{{ url_for('perfil') }}">
+            <label>Nome completo<input name="nome_completo" data-email-name value="{{ usuario.nome_completo }}" maxlength="200" required></label>
+            <label>E-mail<input type="email" name="email" value="{{ usuario.email or '' }}" maxlength="254" autocomplete="email" required></label>
+            <label>Data de aniversário<input type="date" name="data_nascimento" value="{{ formatar_data_input(usuario.data_nascimento) }}"></label>
+            <div class="profile-readonly-grid">
+                <label>Setor<input value="{{ setor_exibicao }}" readonly></label>
+                <label>Porto<input value="{{ porto.nome_porto if porto else usuario.codigo_porto }}" readonly></label>
+            </div>
+            <div class="profile-edit-actions">
+                <button class="primary-button" type="submit">Salvar dados</button>
+                <button class="secondary-button" type="submit" formaction="{{ url_for('cancelar_edicao_perfil') }}" formmethod="post" formnovalidate>Cancelar edição</button>
+            </div>
+        </form>
+        {% else %}
+        <div class="form-stack">
+            <label>Nome completo<input value="{{ usuario.nome_completo }}" readonly></label>
+            <label>E-mail<input value="{{ usuario.email or 'Não informado' }}" readonly></label>
+            <label>Data de aniversário<input value="{{ formatar_data(usuario.data_nascimento) or 'Não informada' }}" readonly></label>
+            <div class="profile-readonly-grid">
+                <label>Setor<input value="{{ setor_exibicao }}" readonly></label>
+                <label>Porto<input value="{{ porto.nome_porto if porto else usuario.codigo_porto }}" readonly></label>
+            </div>
+        </div>
+        {% endif %}
+        <section class="profile-account-actions" aria-label="Ações da conta">
+            <button class="secondary-button profile-password-toggle" type="button" data-password-change-toggle aria-expanded="false">
+                <svg aria-hidden="true" viewBox="0 0 20 20" focusable="false"><path d="M6.25 8V5.75a3.75 3.75 0 0 1 7.5 0V8m-9 0h10.5v8.25H4.75V8Zm5.25 3v2.25"/></svg>
+                <span>Mude sua senha</span>
+            </button>
+            <form class="form-stack profile-password-form" data-password-change-form method="post" action="{{ url_for('alterar_senha_perfil') }}" hidden>
+                <label>Senha atual<input type="password" name="senha_atual" autocomplete="current-password" required></label>
+                <label>Nova senha<input type="password" name="senha_nova" autocomplete="new-password" required></label>
+                <label>Confirme a nova senha<input type="password" name="confirmar_senha" autocomplete="new-password" required></label>
+                <small class="field-help">Use pelo menos 8 caracteres, com letra maiúscula, minúscula, número e um caractere especial (@, #, $, % ou !).</small>
+                <button class="primary-button" type="submit">Alterar senha</button>
+            </form>
+            {% if not editando_dados %}
+            <button class="primary-button" type="button" data-profile-edit-toggle>Editar dados</button>
+            <form class="profile-password-gate" data-profile-password-gate action="{{ url_for('autorizar_edicao_perfil') }}" method="post" hidden>
+                <label>Confirme sua senha para editar<input type="password" name="senha_atual" autocomplete="current-password" required></label>
+                <button class="secondary-button" type="submit">Continuar</button>
+            </form>
+            {% endif %}
+            <button class="theme-toggle profile-theme-toggle" type="button" data-theme-toggle aria-label="Ativar tema escuro" aria-pressed="false">
+                <span class="profile-theme-current">
+                    <svg class="profile-theme-sun" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+                    <svg class="profile-theme-moon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M20.2 15.3A8.5 8.5 0 0 1 8.7 3.8 8.6 8.6 0 1 0 20.2 15.3Z"/></svg>
+                    <span data-theme-label>Tema claro</span>
+                </span>
+                <span class="profile-theme-switch" aria-hidden="true"><span></span></span>
+            </button>
+            <form action="{{ url_for('logout') }}" method="post" class="profile-logout-form" data-confirm-title="Sair da conta" data-confirm-action="Sair" data-confirm-message="Tem certeza que quer sair da conta?"><button class="secondary-button" type="submit">Sair</button></form>
+        </section>
+    </section>
+</div>
+{% endblock %}

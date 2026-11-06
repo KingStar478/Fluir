@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block body %}
+<main class="app-shell">
+    <button class="mobile-menu-toggle" type="button" data-mobile-menu-toggle aria-controls="site-mobile-nav" aria-expanded="false" aria-label="Abrir menu de navegação">☰</button>
+    <button class="mobile-nav-backdrop" type="button" data-mobile-menu-backdrop aria-label="Fechar menu de navegação" hidden></button>
+    <aside class="sidebar-shell" id="site-mobile-nav" data-mobile-nav aria-label="Navegação principal" aria-hidden="false">
+        <div class="sidebar-brand-row">
+            <a class="brand" href="{{ url_for('home') }}">Fluir</a>
+            <button class="mobile-nav-close" type="button" data-mobile-menu-close aria-label="Fechar menu">×</button>
+        </div>
+        <nav class="nav-list">
+            {% for label, endpoint in nav_items %}
+                <a class="nav-link {% if request.endpoint == endpoint or (request.endpoint == 'historico_navios' and endpoint == 'calendario') or (request.endpoint in ['gerenciar_funcionarios', 'decidir_cadastro_funcionario', 'editar_funcionario', 'excluir_funcionario'] and endpoint == 'gerenciar_funcionarios') %}active{% endif %}" href="{{ url_for(endpoint) }}">
+                    {{ label }}{% if endpoint == 'chat_live' %}<span class="chat-unread-badge chat-nav-unread-badge" data-chat-nav-unread hidden></span>{% endif %}
+                </a>
+            {% endfor %}
+        </nav>
+    </aside>
+    <section class="content-shell">
+        <header class="page-header">
+            <h1>{% block page_title %}{% endblock %}</h1>
+            {% set page_subtitle_text %}{% block page_subtitle %}{% endblock %}{% endset %}
+            {% if page_subtitle_text|trim %}<p>{{ page_subtitle_text }}</p>{% endif %}
+        </header>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="app-toast app-toast-{{ category }}" role="status">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </section>
+</main>
+{% endblock %}

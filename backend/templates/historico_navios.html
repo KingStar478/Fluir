@@ -1,0 +1,44 @@
+{% extends "app_base.html" %}
+
+{% block title %}Histórico de Navios - Fluir{% endblock %}
+{% block page_title %}Histórico de Navios{% endblock %}
+{% block page_subtitle %}Consulte somente as passagens concluídas pelo porto, com cargas e datas organizadas por ano.{% endblock %}
+
+{% block content %}
+<div class="history-toolbar">
+    <a class="secondary-button" href="{{ url_for('calendario') }}">Voltar ao calendário</a>
+    <span>{{ historico|length }} ano(s) com registros</span>
+</div>
+
+{% if historico %}
+    <div class="ship-history">
+        {% for ano, datas in historico.items() %}
+            <section class="ship-history-year" aria-labelledby="history-year-{{ ano }}">
+                <h2 id="history-year-{{ ano }}">{{ ano }}</h2>
+                {% for data, registros in datas.items() %}
+                    <section class="ship-history-date">
+                        <h3>{{ data.strftime("%d/%m/%Y") }}</h3>
+                        <ul>
+                            {% for registro in registros %}
+                                <li class="ship-history-record">
+                                    <div><span>Carga</span><strong>{{ registro.tipo_carga }}</strong></div>
+                                    <div><span>Navio</span><strong>{{ registro.nome_embarcacao }}</strong></div>
+                                    {% if registro.hora %}<small>Horário: {{ registro.hora }}</small>{% endif %}
+                                    {% if registro.numero_viagem %}<small>Viagem: {{ registro.numero_viagem }}</small>{% endif %}
+                                    {% if registro.armador %}<small>Armador: {{ registro.armador }}</small>{% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </section>
+                {% endfor %}
+            </section>
+        {% endfor %}
+    </div>
+{% else %}
+    <section class="ship-history-empty">
+        <h2>Nenhum navio registrado ainda</h2>
+        <p>As embarcações aparecerão aqui após a saída efetiva do porto e a confirmação do status “Concluído” no calendário.</p>
+        <a class="primary-button" href="{{ url_for('calendario') }}">Ver calendário</a>
+    </section>
+{% endif %}
+{% endblock %}

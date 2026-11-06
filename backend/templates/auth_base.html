@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block body %}
+<main class="auth-page">
+    <section class="auth-panel">
+        <div class="auth-brand">Fluir</div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="app-toast app-toast-{{ category }}" role="status">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+        {% if error %}
+            <div class="app-toast app-toast-error" role="alert">{{ error }}</div>
+        {% endif %}
+        {% block auth_content %}{% endblock %}
+    </section>
+</main>
+{% endblock %}

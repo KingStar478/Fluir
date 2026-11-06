@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Atualize sua senha - Fluir{% endblock %}
+{% block body %}
+<main class="approval-wait-page">
+    <section class="approval-wait-card password-required-card">
+        <a class="approval-brand" href="#">Fluir</a>
+        <p class="approval-kicker">SEGURANÇA DA CONTA</p>
+        <h1>Crie uma nova senha</h1>
+        <p>Olá, {{ nome }}. Para continuar, escolha uma senha pessoal. A senha temporária não poderá ser usada depois desta etapa.</p>
+        <form class="form-stack password-required-form" method="post">
+            <label>Nova senha<input type="password" name="senha_nova" autocomplete="new-password" required></label>
+            <label>Confirme a nova senha<input type="password" name="confirmar_senha" autocomplete="new-password" required></label>
+            <small class="field-help">Use pelo menos 8 caracteres, com letra maiúscula, minúscula, número e um caractere especial (@, #, $, % ou !).</small>
+            <button class="primary-button" type="submit">Salvar nova senha</button>
+        </form>
+    </section>
+</main>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="app-toast app-toast-{{ category }}" role="status">{{ message }}</div>{% endfor %}{% endwith %}
+{% endblock %}

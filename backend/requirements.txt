@@ -1,0 +1,6 @@
+Flask
+Flask-SQLAlchemy
+fastapi
+uvicorn[standard]
+redis
+# Service Worker: recurso nativo do navegador, implementado em static/service-worker.js.

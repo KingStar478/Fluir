@@ -1,0 +1,27 @@
+# Python e ambientes locais
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+backend/venv/
+
+# Segredos, configuracoes locais e dados da demonstracao
+.env
+.env.*
+!.env.example
+backend/instance/
+*.db
+*.sqlite
+*.sqlite3
+*.secret
+*.log
+
+# Arquivos enviados durante o uso local (fotos e anexos)
+backend/static/uploads/
+
+# Materiais de slides, gravacoes e arquivos temporarios do Codex
+*.pptx
+*.mp4
+.codex-presentation-build/
+backend/.codex-presentation-build/
+output/

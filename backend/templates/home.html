@@ -1,0 +1,127 @@
+{% extends "app_base.html" %}
+
+{% block title %}Painel - Fluir{% endblock %}
+{% block page_title %}Painel climático{% endblock %}
+{% block page_subtitle %}Condições meteorológicas para a operação portuária{% endblock %}
+
+{% block content %}
+{% if notificacoes %}
+<aside class="home-notification-menu legend-help" aria-label="Notificações do calendário">
+    <button class="help-button notification-button" type="button" aria-label="Abrir notificações do calendário">
+        {{ notificacoes|length }}
+    </button>
+    <div class="legend-popover home-notification-popover" role="tooltip">
+        <div class="home-notification-header">
+            <span>Calendário</span>
+            <strong>{{ notificacoes|length }}</strong>
+        </div>
+        {% if notificacoes %}
+            <div class="home-notification-list">
+                {% for notificacao in notificacoes %}
+                    <article class="home-notification-item">
+                        <strong>{{ notificacao.titulo }}</strong>
+                        <p>{{ notificacao.mensagem }}</p>
+                        <small>{{ notificacao.criado_em.strftime("%d/%m/%Y %H:%M") }}</small>
+                    </article>
+                {% endfor %}
+            </div>
+            <form class="home-notification-read-form" method="post" action="{{ url_for('marcar_notificacoes_calendario_lidas') }}">
+                <button class="secondary-button" type="submit">Marcar como lidas</button>
+            </form>
+        {% else %}
+            <p class="home-notification-empty">Sem novas mudanças no calendário.</p>
+        {% endif %}
+    </div>
+</aside>
+{% endif %}
+
+<section class="climate-hero">
+    <div>
+        <span>Painel do porto</span>
+        <h2>{{ nosso_porto.codigo }} - {{ nosso_porto.nome }}</h2>
+        <p>{{ nosso_porto.hidrovia }}</p>
+    </div>
+    <div class="climate-hero-status">
+        <button class="alerts-action-button alert-normal" type="button" data-active-alert-card aria-haspopup="dialog" aria-controls="active-alert-dialog" aria-label="Abrir alertas climáticos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg>
+            <span>Alertas</span>
+            <span class="alerts-action-count" data-active-alert-count aria-live="polite">2</span>
+        </button>
+        <button class="panel-refresh-button" type="button" data-drought-refresh>Atualizar</button>
+    </div>
+</section>
+
+<section class="alert-card-grid" aria-label="Resumo climático">
+    <article class="alert-card alert-attention" data-rain-card>
+        <span>Risco de chuva intensa</span>
+        <strong data-rain-level>Consultando...</strong>
+        <p data-rain-detail>Buscando chuva prevista nas próximas 24 horas.</p>
+    </article>
+    <article
+        class="alert-card drought-widget drought-loading"
+        data-drought-widget
+        data-lat="{{ nosso_porto.lat }}"
+        data-lon="{{ nosso_porto.lon }}"
+        data-port="{{ nosso_porto.nome }}"
+        data-code="{{ nosso_porto.codigo }}"
+        data-waterway="{{ nosso_porto.hidrovia }}"
+    >
+        <span>Nível de seca</span>
+        <strong data-drought-level>Consultando...</strong>
+        <p data-drought-detail>Buscando previsão real de chuva.</p>
+    </article>
+    <article class="alert-card alert-attention" data-wind-card>
+        <span>Vento no porto</span>
+        <strong data-wind-level>Consultando...</strong>
+        <p data-wind-detail>Buscando condições atuais estimadas.</p>
+    </article>
+</section>
+
+<dialog class="active-alert-dialog" id="active-alert-dialog" data-active-alert-dialog aria-labelledby="active-alert-title">
+    <section class="active-alert-dialog-card">
+        <button class="active-alert-dialog-close" type="button" data-active-alert-close aria-label="Fechar resumo">&times;</button>
+        <span>Monitoramento do porto</span>
+        <h2 id="active-alert-title">Resumo dos alertas atuais</h2>
+        <div data-active-alert-summary aria-live="polite">
+            <p class="active-alert-empty">Consultando a previsão para verificar alertas reais.</p>
+        </div>
+        <p class="active-alert-demo-disclaimer">Os dois avisos abaixo são fictícios. Eles demonstram como o resumo fica com vários alertas e não representam condições atuais.</p>
+        <article class="active-alert-demo">
+            <span class="active-alert-demo-label">Exemplo demonstrativo</span>
+            <strong>Alerta de chuva intensa — exemplo</strong>
+            <p>Exemplo de aviso de chuva para demonstrar a leitura do painel.</p>
+        </article>
+        <article class="active-alert-demo">
+            <span class="active-alert-demo-label">Exemplo demonstrativo</span>
+            <strong>Risco de estiagem — exemplo</strong>
+            <p>Exemplo de aviso de pouca chuva acumulada, apenas para demonstração.</p>
+        </article>
+    </section>
+</dialog>
+
+<section class="home-alert-layout home-river-layout">
+    <article class="river-panel weather-panel">
+        <div class="panel-heading">
+            <div>
+                <span>Previsão para operação</span>
+                <h2>Chuva e vento nas próximas 24 horas</h2>
+            </div>
+            <a class="trend-pill weather-source-badge" data-weather-updated href="https://open-meteo.com/en/docs" target="_blank" rel="noopener noreferrer">Open-Meteo Forecast API</a>
+        </div>
+        <div class="weather-chart-scroll" data-weather-chart-container>
+            <svg class="weather-forecast-chart" data-rain-chart role="img" aria-label="Previsão de chuva e probabilidade em 24 horas" viewBox="0 0 840 290" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="weather-chart-legend" aria-label="Legenda do gráfico">
+            <span><i class="weather-legend-rain"></i>Chuva prevista (mm/h)</span>
+            <span><i class="weather-legend-probability"></i>Probabilidade de chuva</span>
+        </div>
+        <div class="river-summary weather-summary">
+            <div><span>Condição atual (modelo)</span><strong data-current-weather>--°C · --% umidade</strong></div>
+            <div><span>Chuva agora</span><strong data-current-rain>-- mm/h</strong></div>
+            <div><span>Vento e rajadas</span><strong data-current-wind>-- / -- km/h</strong></div>
+            <div><span>Total previsto em 24h</span><strong data-rain-total>-- mm</strong></div>
+        </div>
+        <p class="weather-source-note">As condições atuais são estimativas de modelos meteorológicos e podem diferir de medições locais.</p>
+    </article>
+</section>
+{% endblock %}
